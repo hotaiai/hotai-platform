@@ -214,11 +214,14 @@ export class ChatService {
 
   static calculateCost(model: AIModel, tokens: number): number {
     const provider = this.getProvider(model)
-    const modelConfig = AI_MODELS[provider][model as keyof (typeof AI_MODELS)[typeof provider]]
-    if (!modelConfig || typeof modelConfig !== 'object' || !('costPer1k' in modelConfig)) {
+    const modelConfigs = AI_MODELS[provider]
+    const modelConfig = modelConfigs[model as keyof typeof modelConfigs]
+    
+    if (!modelConfig || !('costPer1k' in modelConfig)) {
       throw new Error(`Invalid model configuration for ${model}`)
     }
-    return (tokens / 1000) * modelConfig.costPer1k
+    
+    return (tokens / 1000) * (modelConfig as { costPer1k: number }).costPer1k
   }
 
   private static getProvider(model: AIModel): keyof typeof AI_MODELS {
