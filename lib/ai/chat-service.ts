@@ -1,6 +1,6 @@
 import { openai, anthropic, genAI, AI_MODELS, AIModel } from "./providers"
-import { ChatCompletionMessageParam } from "openai/resources/chat"
-import { MessageParam } from "@anthropic-ai/sdk/resources"
+import type { ChatCompletionMessageParam } from "openai"
+import type { MessageParam } from "@anthropic-ai/sdk"
 
 export interface ChatMessage {
   role: "user" | "assistant" | "system"
