@@ -132,3 +132,4 @@ MIT License
 
 - 이메일: contact@hotai.com
 - 웹사이트: https://hotai.com# Deploy trigger
+# Deploy after env fix
