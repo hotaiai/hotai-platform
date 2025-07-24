@@ -8,6 +8,7 @@ type MessageParam = Anthropic.Messages.MessageParam
 export interface ChatMessage {
   role: "user" | "assistant" | "system"
   content: string
+  images?: string[] // base64 encoded images
 }
 
 export interface ChatOptions {
@@ -39,10 +40,34 @@ export class ChatService {
     temperature: number,
     maxTokens: number
   ): Promise<string> {
-    const openaiMessages: ChatCompletionMessageParam[] = messages.map(msg => ({
-      role: msg.role,
-      content: msg.content,
-    }))
+    const openaiMessages: ChatCompletionMessageParam[] = messages.map(msg => {
+      // Handle multimodal messages
+      if (msg.images && msg.images.length > 0 && msg.role === "user") {
+        const content: any[] = [
+          { type: "text", text: msg.content }
+        ]
+        
+        // Add images to content
+        msg.images.forEach(imageBase64 => {
+          content.push({
+            type: "image_url",
+            image_url: {
+              url: imageBase64
+            }
+          })
+        })
+        
+        return {
+          role: msg.role,
+          content
+        }
+      }
+      
+      return {
+        role: msg.role,
+        content: msg.content,
+      }
+    })
 
     const response = await openai.chat.completions.create({
       model,
@@ -64,10 +89,40 @@ export class ChatService {
     const systemMessage = messages.find(m => m.role === "system")?.content || ""
     const anthropicMessages: MessageParam[] = messages
       .filter(m => m.role !== "system")
-      .map(msg => ({
-        role: msg.role === "user" ? "user" : "assistant",
-        content: msg.content,
-      }))
+      .map(msg => {
+        // Handle multimodal messages
+        if (msg.images && msg.images.length > 0 && msg.role === "user") {
+          const content: any[] = [
+            { type: "text", text: msg.content }
+          ]
+          
+          // Add images to content
+          msg.images.forEach(imageBase64 => {
+            // Extract base64 data from data URL
+            const base64Data = imageBase64.split(',')[1]
+            const mimeType = imageBase64.match(/data:([^;]+);/)?.[1] || 'image/jpeg'
+            
+            content.push({
+              type: "image",
+              source: {
+                type: "base64",
+                media_type: mimeType,
+                data: base64Data
+              }
+            })
+          })
+          
+          return {
+            role: "user" as const,
+            content
+          }
+        }
+        
+        return {
+          role: msg.role === "user" ? "user" as const : "assistant" as const,
+          content: msg.content,
+        }
+      })
 
     const response = await anthropic.messages.create({
       model,
@@ -89,12 +144,48 @@ export class ChatService {
     const geminiModel = genAI.getGenerativeModel({ model })
     
     // Convert messages to Gemini format
-    const history = messages.slice(0, -1).map(msg => ({
-      role: msg.role === "user" ? "user" : "model",
-      parts: [{ text: msg.content }],
-    }))
+    const history = messages.slice(0, -1).map(msg => {
+      const parts: any[] = [{ text: msg.content }]
+      
+      // Add images if present
+      if (msg.images && msg.images.length > 0) {
+        msg.images.forEach(imageBase64 => {
+          // Extract base64 data from data URL
+          const base64Data = imageBase64.split(',')[1]
+          const mimeType = imageBase64.match(/data:([^;]+);/)?.[1] || 'image/jpeg'
+          
+          parts.push({
+            inlineData: {
+              mimeType,
+              data: base64Data
+            }
+          })
+        })
+      }
+      
+      return {
+        role: msg.role === "user" ? "user" : "model",
+        parts,
+      }
+    })
     
     const lastMessage = messages[messages.length - 1]
+    const lastParts: any[] = [{ text: lastMessage.content }]
+    
+    // Add images to last message if present
+    if (lastMessage.images && lastMessage.images.length > 0) {
+      lastMessage.images.forEach(imageBase64 => {
+        const base64Data = imageBase64.split(',')[1]
+        const mimeType = imageBase64.match(/data:([^;]+);/)?.[1] || 'image/jpeg'
+        
+        lastParts.push({
+          inlineData: {
+            mimeType,
+            data: base64Data
+          }
+        })
+      })
+    }
     
     const chat = geminiModel.startChat({
       history,
@@ -104,7 +195,7 @@ export class ChatService {
       },
     })
 
-    const result = await chat.sendMessage(lastMessage.content)
+    const result = await chat.sendMessage(lastParts)
     return result.response.text()
   }
 

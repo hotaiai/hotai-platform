@@ -24,6 +24,7 @@ model User {
   // Relations
   accounts      Account[]
   sessions      Session[]
+  projects      Project[]
   chats         Chat[]
   messages      Message[]
   prompts       Prompt[]
@@ -61,17 +62,35 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+// Projects for organizing chats
+model Project {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  color       String    @default("#3B82F6") // Blue-500
+  userId      String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chats       Chat[]
+}
+
 // Chat conversations
 model Chat {
   id          String    @id @default(cuid())
   title       String
   userId      String
+  projectId   String?   // Optional project association
   model       String
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
   messages    Message[]
+  
+  @@index([projectId])
 }
 
 // Chat messages
@@ -81,6 +100,7 @@ model Message {
   userId      String
   role        String    // 'user' | 'assistant' | 'system'
   content     String
+  images      String[]  @default([]) // Array of image URLs
   model       String?
   tokens      Int?
   createdAt   DateTime  @default(now())

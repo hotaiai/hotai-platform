@@ -12,7 +12,7 @@ export function useChat() {
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
-  const sendMessage = useCallback(async (content: string, model: string) => {
+  const sendMessage = useCallback(async (content: string, model: string, images?: File[]) => {
     try {
       setIsLoading(true)
       
@@ -20,16 +20,37 @@ export function useChat() {
       const userMessage: Message = { role: "user", content }
       setMessages(prev => [...prev, userMessage])
 
+      // Prepare request body
+      let body: any = {
+        messages: [...messages, userMessage],
+        model,
+      }
+
+      // If images are provided, convert to base64
+      if (images && images.length > 0) {
+        const imageDataPromises = images.map(async (image) => {
+          return new Promise<string>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onloadend = () => {
+              const base64 = reader.result as string
+              resolve(base64)
+            }
+            reader.onerror = reject
+            reader.readAsDataURL(image)
+          })
+        })
+        
+        const imageData = await Promise.all(imageDataPromises)
+        body.images = imageData
+      }
+
       // Call API
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          messages: [...messages, userMessage],
-          model,
-        }),
+        body: JSON.stringify(body),
       })
 
       if (!response.ok) {
