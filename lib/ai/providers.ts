@@ -2,16 +2,16 @@ import OpenAI from "openai"
 import Anthropic from "@anthropic-ai/sdk"
 import { GoogleGenerativeAI } from "@google/generative-ai"
 
-// Initialize AI providers
+// Initialize AI providers (lazy — keys may be absent at build time)
 export const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
+  apiKey: process.env.OPENAI_API_KEY || "",
 })
 
 export const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
+  apiKey: process.env.ANTHROPIC_API_KEY || "",
 })
 
-export const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!)
+export const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "")
 
 // Model configurations
 export const AI_MODELS = {

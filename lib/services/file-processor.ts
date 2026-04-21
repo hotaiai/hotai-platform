@@ -1,7 +1,3 @@
-import pdf from 'pdf-parse'
-import mammoth from 'mammoth'
-import csv from 'csv-parser'
-import { Readable } from 'stream'
 
 export interface ProcessedFile {
   filename: string
@@ -62,41 +58,31 @@ export class FileProcessor {
   }
 
   private static async processPDF(buffer: Buffer): Promise<string> {
+    if (typeof window !== 'undefined') throw new Error('PDF processing is only available on the server')
+    const pdf = (await import('pdf-parse')).default
     const data = await pdf(buffer)
     return data.text
   }
 
   private static async processDOCX(buffer: Buffer): Promise<string> {
+    if (typeof window !== 'undefined') throw new Error('DOCX processing is only available on the server')
+    const mammoth = await import('mammoth')
     const result = await mammoth.extractRawText({ buffer })
     return result.value
   }
 
   private static async processCSV(buffer: Buffer): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const results: any[] = []
-      const stream = Readable.from(buffer.toString())
-      
-      stream
-        .pipe(csv())
-        .on('data', (data) => results.push(data))
-        .on('end', () => {
-          // Convert CSV data to readable format
-          if (results.length > 0) {
-            const headers = Object.keys(results[0])
-            const content = [
-              headers.join(' | '),
-              headers.map(() => '---').join(' | '),
-              ...results.map(row => 
-                headers.map(h => row[h] || '').join(' | ')
-              )
-            ].join('\n')
-            resolve(content)
-          } else {
-            resolve('')
-          }
-        })
-        .on('error', reject)
-    })
+    const lines = buffer.toString('utf-8').split('\n').filter(line => line.trim())
+    if (lines.length === 0) return ''
+
+    const headers = lines[0].split(',').map(h => h.trim())
+    const rows = lines.slice(1).map(line => line.split(',').map(c => c.trim()))
+
+    return [
+      headers.join(' | '),
+      headers.map(() => '---').join(' | '),
+      ...rows.map(row => row.join(' | '))
+    ].join('\n')
   }
 
   private static async processExcel(buffer: Buffer): Promise<string> {

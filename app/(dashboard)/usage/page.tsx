@@ -87,7 +87,7 @@ export default function UsagePage() {
       const modelMap = new Map<string, { tokens: number; cost: number; count: number }>()
       const dateMap = new Map<string, { tokens: number; cost: number }>()
 
-      usageData?.forEach(record => {
+      usageData?.forEach((record: { model: string; total_tokens: number; cost: number; created_at: string }) => {
         stats.totalTokens += record.total_tokens
         stats.totalCost += record.cost
 
