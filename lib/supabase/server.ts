@@ -5,9 +5,20 @@ import type { Database } from '@/types/supabase'
 export async function createSupabaseServerClient() {
   const cookieStore = cookies()
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return {
+      auth: {
+        getUser: async () => ({ data: { user: null }, error: null }),
+      },
+    } as unknown as ReturnType<typeof createServerClient<Database>>
+  }
+
   return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         get(name: string) {
