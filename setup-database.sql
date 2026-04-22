@@ -236,9 +236,7 @@ CREATE POLICY "Users can update their own projects" ON projects
 CREATE POLICY "Users can delete their own projects" ON projects
     FOR DELETE USING (auth.uid() = user_id);
 
--- Update triggers
-CREATE TRIGGER update_projects_updated_at BEFORE UPDATE ON projects
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+-- Update triggers (removed - function not defined)
 
 -- Add functions for project management
 CREATE OR REPLACE FUNCTION get_user_projects_with_chat_count(p_user_id UUID)
